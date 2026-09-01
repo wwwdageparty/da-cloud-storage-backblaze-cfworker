@@ -88,22 +88,6 @@ export default {
     const fileKey = request.headers.get("X-DA-File-Key");
     const prefix = request.headers.get("X-DA-Prefix") || "";
 
-    if (!service) {
-      return rawError(
-        "INVALID_SERVICE",
-        "Missing X-DA-Service header",
-        400
-      );
-    }
-
-    if (service !== C_SERVICE) {
-      return rawError(
-        "INVALID_SERVICE",
-        `Invalid service: ${service}`,
-        400
-      );
-    }
-
     if (!action) {
       return rawError(
         "INVALID_ACTION",
