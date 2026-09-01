@@ -1,0 +1,7 @@
+name = "da-storage-b2"
+main = "src/worker.js"
+compatibility_date = "2026-09-01"
+
+[vars]
+# Non-secret configuration can go here.
+# B2_KEY_ID and B2_APPLICATION_KEY should NOT go here.

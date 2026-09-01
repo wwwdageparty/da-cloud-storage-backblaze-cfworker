@@ -1,0 +1,301 @@
+==================================================
+BACKBLAZE B2 STORAGE SERVICE
+RAW API DOCUMENTATION
+==================================================
+
+Endpoint:
+https://storage.example.com/raw
+
+Service Name:
+bb1
+
+Protocol:
+DA Raw HTTP Protocol
+
+The storage service is accessed through the /raw endpoint.
+
+The gateway uses the X-DA-Service header to route the
+request to the correct service.
+
+The request body is reserved for raw file data.
+
+For download, list, and delete operations, the request
+body is empty.
+
+For upload, the request body contains the complete file
+data and is streamed directly to the storage service.
+
+--------------------------------------------------
+REQUIRED HEADERS
+--------------------------------------------------
+
+Authorization: Bearer <YOUR_GATEWAY_TOKEN>
+X-DA-Service: bb1
+X-DA-Action: <action>
+
+--------------------------------------------------
+OPTIONAL HEADERS
+--------------------------------------------------
+
+X-DA-File-Key: <file_path>
+
+Used by:
+    upload
+    download
+    delete
+
+X-DA-Prefix: <prefix_path>
+
+Used by:
+    list
+
+Content-Type: <mime_type>
+
+Used when uploading a file.
+
+Examples:
+    text/plain
+    application/json
+    application/pdf
+    application/octet-stream
+
+--------------------------------------------------
+1. LIST FILES
+--------------------------------------------------
+
+Action:
+list
+
+Request body:
+empty
+
+List all files:
+
+curl -X POST https://storage.example.com/raw \
+  -H "Authorization: Bearer YOUR_GATEWAY_TOKEN" \
+  -H "X-DA-Service: bb1" \
+  -H "X-DA-Action: list"
+
+List files under a prefix:
+
+curl -X POST https://storage.example.com/raw \
+  -H "Authorization: Bearer YOUR_GATEWAY_TOKEN" \
+  -H "X-DA-Service: bb1" \
+  -H "X-DA-Action: list" \
+  -H "X-DA-Prefix: test1/"
+
+The response is JSON containing the matching files.
+
+--------------------------------------------------
+2. UPLOAD FILE
+--------------------------------------------------
+
+Action:
+upload
+
+Required header:
+X-DA-File-Key
+
+Request body:
+raw file data
+
+The file body is streamed directly to the storage
+backend. The service does not require the file to be
+wrapped inside JSON or another envelope.
+
+Upload text:
+
+curl -X POST https://storage.example.com/raw \
+  -H "Authorization: Bearer YOUR_GATEWAY_TOKEN" \
+  -H "X-DA-Service: bb1" \
+  -H "X-DA-Action: upload" \
+  -H "X-DA-File-Key: test1/notes.txt" \
+  -H "Content-Type: text/plain" \
+  --data "Hello from Gateway via bb1 route!"
+
+Upload a binary file:
+
+curl -X POST https://storage.example.com/raw \
+  -H "Authorization: Bearer YOUR_GATEWAY_TOKEN" \
+  -H "X-DA-Service: bb1" \
+  -H "X-DA-Action: upload" \
+  -H "X-DA-File-Key: uploads/document.pdf" \
+  -H "Content-Type: application/pdf" \
+  --data-binary "@./document.pdf"
+
+If the file already exists at the same file key, the
+upload operation updates/replaces the stored file
+according to the storage backend's behavior.
+
+The response is JSON containing the upload result.
+
+--------------------------------------------------
+3. DOWNLOAD FILE
+--------------------------------------------------
+
+Action:
+download
+
+Required header:
+X-DA-File-Key
+
+Request body:
+empty
+
+Download to terminal:
+
+curl -X POST https://storage.example.com/raw \
+  -H "Authorization: Bearer YOUR_GATEWAY_TOKEN" \
+  -H "X-DA-Service: bb1" \
+  -H "X-DA-Action: download" \
+  -H "X-DA-File-Key: test1/notes.txt"
+
+Download and save to a local file:
+
+curl -X POST https://storage.example.com/raw \
+  -H "Authorization: Bearer YOUR_GATEWAY_TOKEN" \
+  -H "X-DA-Service: bb1" \
+  -H "X-DA-Action: download" \
+  -H "X-DA-File-Key: uploads/document.pdf" \
+  -o ./downloaded_document.pdf
+
+The successful response body is the raw file data.
+
+No JSON envelope is added around the downloaded file.
+
+This allows standard tools such as curl and wget to
+download files directly.
+
+--------------------------------------------------
+4. DELETE FILE
+--------------------------------------------------
+
+Action:
+delete
+
+Required header:
+X-DA-File-Key
+
+Request body:
+empty
+
+Command:
+
+curl -X POST https://storage.example.com/raw \
+  -H "Authorization: Bearer YOUR_GATEWAY_TOKEN" \
+  -H "X-DA-Service: bb1" \
+  -H "X-DA-Action: delete" \
+  -H "X-DA-File-Key: test1/notes.txt"
+
+The response is JSON containing the delete result.
+
+--------------------------------------------------
+REQUEST MODEL
+--------------------------------------------------
+
+All operations use HTTP POST.
+
+The gateway does not use the URL path to identify the
+storage service.
+
+The service is identified by:
+
+X-DA-Service: bb1
+
+The operation is identified by:
+
+X-DA-Action: <action>
+
+The file is identified by:
+
+X-DA-File-Key: <file_path>
+
+The directory/prefix for listing is identified by:
+
+X-DA-Prefix: <prefix_path>
+
+The HTTP request body is reserved for raw data.
+
+Example upload:
+
+    HTTP headers
+        |
+        +-- X-DA-Service: bb1
+        +-- X-DA-Action: upload
+        +-- X-DA-File-Key: apps/example.bin
+        |
+        +-- raw binary body
+                |
+                v
+             B2 storage
+
+Example download:
+
+    HTTP headers
+        |
+        +-- X-DA-Service: bb1
+        +-- X-DA-Action: download
+        +-- X-DA-File-Key: apps/example.bin
+        |
+        v
+      B2 storage
+        |
+        +-- raw binary response
+                |
+                v
+              curl
+
+--------------------------------------------------
+ERROR RESPONSES
+--------------------------------------------------
+
+Errors are returned as JSON.
+
+Example:
+
+{
+  "status": "error",
+  "code": "FILE_NOT_FOUND",
+  "message": "File key not found"
+}
+
+Successful file downloads are NOT JSON.
+
+A successful download response contains only the
+requested file data.
+
+--------------------------------------------------
+SUPPORTED OPERATIONS
+--------------------------------------------------
+
+list
+    List files, optionally using X-DA-Prefix.
+
+upload
+    Create or update a file using X-DA-File-Key.
+
+download
+    Retrieve a file using X-DA-File-Key.
+
+delete
+    Delete a file using X-DA-File-Key.
+
+--------------------------------------------------
+IMPORTANT
+--------------------------------------------------
+
+/raw is intentionally different from the main DA
+application protocol.
+
+The main DA protocol may use a structured message header
+followed by an optional payload.
+
+The /raw interface does not use that framing.
+
+The /raw interface exists specifically so that ordinary
+HTTP clients such as curl and wget can directly upload
+and download raw data.
+
+The gateway only needs to inspect the HTTP headers,
+route the request using X-DA-Service, and forward the
+request body without modifying it.
